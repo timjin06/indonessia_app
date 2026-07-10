@@ -1,0 +1,21 @@
+{
+  "name": "Volunteer Kit",
+  "short_name": "Volunteer",
+  "description": "인도네시아 해외봉사팀을 위한 오프라인 커스터마이징 키트",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f6f2e9",
+  "theme_color": "#0f766e",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "assets/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["education", "productivity", "travel"],
+  "lang": "ko"
+}

@@ -1,0 +1,545 @@
+﻿<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0f766e" />
+    <meta
+      name="description"
+      content="인도네시아 해외봉사팀을 위한 오프라인 PWA"
+    />
+    <title>Volunteer Kit</title>
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" href="assets/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="assets/icon.svg" />
+    <link rel="stylesheet" href="styles.css?v=tabs1" />
+    <script>
+      if (location.hostname === "127.0.0.1" || location.hostname === "localhost") {
+        window.__VOLUNTEER_KIT_DEV__ = true;
+        navigator.serviceWorker?.getRegistrations?.().then((registrations) => {
+          registrations.forEach((registration) => registration.unregister());
+        });
+        window.caches?.keys?.().then((keys) => {
+          keys.forEach((key) => caches.delete(key));
+        });
+      }
+    </script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <button class="icon-button motif-button app-logo-button" type="button" data-open-settings aria-label="팀 설정 열기">
+          <img class="app-logo-image" src="assets/app-logo.png" alt="" />
+        </button>
+        <div>
+          <p class="eyebrow">Today volunteer</p>
+          <h1 data-team-title>Volunteer Kit</h1>
+        </div>
+        <button class="icon-button" type="button" data-open-install aria-label="설치 안내 열기">
+          <span class="icon" data-icon="download"></span>
+        </button>
+      </header>
+
+      <main class="app-main">
+        <section class="view active" data-view="home" aria-labelledby="home-title">
+          <div class="home-map-shell">
+            <div class="map-canvas" data-google-map aria-label="봉사 지역 지도">
+              <div class="map-island island-java"></div>
+              <div class="map-island island-sumatra"></div>
+              <div class="map-island island-borneo"></div>
+              <div class="map-route"></div>
+              <div class="map-pin"></div>
+              <div class="map-fallback-note" data-map-status>Google 지도를 불러오는 중</div>
+            </div>
+            <button class="map-layer-button" type="button" data-locate-me aria-label="현재 위치 확인">
+              <span class="icon" data-icon="locate"></span>
+            </button>
+            <button class="map-location-card" type="button" data-open-settings aria-label="팀 기준 위치 수정">
+              <span class="icon" data-icon="mapPin"></span>
+              <div>
+                <small data-location-kicker>Indonesia volunteer base</small>
+                <strong data-location-label>Yogyakarta 근처</strong>
+              </div>
+            </button>
+          </div>
+
+          <section class="home-panel" aria-labelledby="home-title">
+            <div class="home-grabber" aria-hidden="true"></div>
+            <div class="home-title-row">
+              <div>
+                <p class="eyebrow">Today volunteer</p>
+                <h2 id="home-title">오늘의 봉사</h2>
+              </div>
+              <div class="mascot-sprite title-mascot" aria-hidden="true"></div>
+              <div class="home-actions">
+                <button class="round-action" type="button" data-open-uploader aria-label="자료 가져오기">
+                  <span class="icon" data-icon="upload"></span>
+                </button>
+                <button class="round-action" type="button" data-open-settings aria-label="팀 설정">
+                  <span class="icon" data-icon="spark"></span>
+                </button>
+              </div>
+            </div>
+
+            <div class="mission-stats">
+              <article class="mission-day-card">
+                <span class="stat-avatar stat-calendar"><span class="icon" data-icon="calendar"></span></span>
+                <div>
+                  <strong data-volunteer-day>DAY 1</strong>
+                  <small data-date-summary>일정 미설정</small>
+                </div>
+                <div class="mission-remain">
+                  <strong data-days-left>0일</strong>
+                  <small>남음</small>
+                </div>
+              </article>
+            </div>
+
+            <section class="prep-card">
+              <div>
+                <p class="eyebrow">Before going out</p>
+                <h3>오늘 준비물 체크</h3>
+                <p>출발 전에 팀별 필수 준비물을 확인하세요.</p>
+                <button class="prep-edit-button" type="button" data-open-prep-settings>준비물 수정</button>
+              </div>
+              <div class="prep-checks" data-prep-list></div>
+            </section>
+
+            <section class="today-section">
+              <div class="agenda-heading">
+                <div>
+                  <p class="eyebrow">Remaining today</p>
+                  <h3>남은 오늘 일정</h3>
+                </div>
+                <button class="text-button" type="button" data-open-schedule>일정 설정</button>
+              </div>
+              <div class="agenda-list" data-agenda-list></div>
+            </section>
+
+            <section class="sync-card">
+              <div>
+                <p class="eyebrow">Team cloud</p>
+                <strong data-sync-title>팀 클라우드 연결</strong>
+                <small data-sync-status>팀 데이터를 동기화할 수 있어요.</small>
+              </div>
+              <button class="secondary-action compact-action" type="button" data-open-sync>
+                <span class="icon" data-icon="wifi"></span>
+                연결
+              </button>
+            </section>
+          </section>
+        </section>
+
+        <section class="view" data-view="phrasebook" aria-labelledby="phrase-title">
+          <div class="section-heading sticky-heading">
+            <div>
+              <p class="eyebrow">Bahasa pocket</p>
+              <h2 id="phrase-title">회화·사전</h2>
+            </div>
+            <button class="icon-button" type="button" data-open-item-form="phrase" aria-label="회화 추가">
+              <span class="icon" data-icon="plus"></span>
+            </button>
+          </div>
+          <div class="search-panel">
+            <label class="search-box">
+              <span class="icon" data-icon="search"></span>
+              <input data-search="phrases" type="search" placeholder="한국어, 인도네시아어, 발음, 태그 검색" />
+            </label>
+            <div class="chip-row" data-category-filter="phrases"></div>
+          </div>
+          <div class="card-list" data-phrase-list></div>
+        </section>
+
+        <section class="view" data-view="lessons" aria-labelledby="lessons-title">
+          <div class="section-heading sticky-heading">
+            <div>
+              <p class="eyebrow">Learning volunteer</p>
+              <h2 id="lessons-title">아이들 학습봉사</h2>
+            </div>
+            <button class="icon-button" type="button" data-open-item-form="lesson" aria-label="수업 추가">
+              <span class="icon" data-icon="plus"></span>
+            </button>
+          </div>
+          <div class="tool-strip">
+            <button class="tool-chip active" type="button" data-lesson-mode="cards">수업 카드</button>
+            <button class="tool-chip" type="button" data-lesson-mode="timer">활동 타이머</button>
+            <button class="tool-chip" type="button" data-lesson-mode="groups">조 나누기</button>
+            <button class="tool-chip" type="button" data-lesson-mode="namebook">이름 수첩</button>
+          </div>
+          <div data-lesson-panel="cards" class="lesson-panel active">
+            <div class="card-list" data-lesson-list></div>
+          </div>
+          <div data-lesson-panel="timer" class="lesson-panel utility-panel">
+            <div class="utility-card">
+              <h3>수업 활동 타이머</h3>
+              <p>게임, 발표, 만들기 활동 시간을 빠르게 맞춰보세요.</p>
+              <div class="timer-display" data-timer-display>05:00</div>
+              <div class="timer-controls">
+                <button type="button" data-timer-set="180">3분</button>
+                <button type="button" data-timer-set="300">5분</button>
+                <button type="button" data-timer-set="600">10분</button>
+              </div>
+              <button class="primary-action full" type="button" data-timer-toggle>시작</button>
+            </div>
+          </div>
+          <div data-lesson-panel="groups" class="lesson-panel utility-panel">
+            <div class="utility-card">
+              <h3>랜덤 조 나누기</h3>
+              <p>이름을 줄마다 입력하고 조 개수를 고르면 바로 나눠줍니다.</p>
+              <textarea data-group-names placeholder="민지&#10;준호&#10;하나&#10;지훈"></textarea>
+              <div class="inline-form">
+                <label>조 개수 <input data-group-count type="number" min="2" value="4" /></label>
+                <button type="button" data-make-groups>나누기</button>
+              </div>
+              <div class="group-result" data-group-result></div>
+            </div>
+          </div>
+          <div data-lesson-panel="namebook" class="lesson-panel utility-panel">
+            <div class="utility-card">
+              <h3>이름 수첩</h3>
+              <p>현지 아이들이나 사람들의 이름과 특징을 짧게 적어두고 함께 외워보세요.</p>
+              <div class="namebook-form">
+                <label>이름 <input data-namebook-name placeholder="예: Sari" /></label>
+                <label>특징 <input data-namebook-note placeholder="예: 노란 머리핀, 그림을 좋아함" /></label>
+                <button class="primary-action full" type="button" data-add-name-note>추가</button>
+              </div>
+              <div class="namebook-list" data-namebook-list></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="view" data-view="field" aria-labelledby="field-title">
+          <div class="section-heading sticky-heading">
+            <div>
+              <p class="eyebrow">Build & safety</p>
+              <h2 id="field-title">건축 현장</h2>
+            </div>
+            <button class="icon-button" type="button" data-open-item-form="checklist" aria-label="체크리스트 추가">
+              <span class="icon" data-icon="plus"></span>
+            </button>
+          </div>
+          <div class="field-layout">
+            <section class="content-band flush">
+              <div class="section-heading compact">
+                <h3>작업 전 체크리스트</h3>
+              </div>
+              <div class="check-list" data-check-list></div>
+            </section>
+            <section class="content-band flush">
+              <div class="section-heading compact">
+                <h3>현장 표현</h3>
+                <button class="text-button" type="button" data-route="phrasebook" data-route-category="건축">전체 보기</button>
+              </div>
+              <div class="word-grid" data-field-words></div>
+            </section>
+          </div>
+        </section>
+
+        <section class="view" data-view="safety" aria-labelledby="safety-title">
+          <div class="section-heading sticky-heading">
+            <div>
+              <p class="eyebrow">Emergency first</p>
+              <h2 id="safety-title">안전·긴급</h2>
+            </div>
+            <button class="icon-button" type="button" data-open-item-form="contact" aria-label="연락처 추가">
+              <span class="icon" data-icon="plus"></span>
+            </button>
+          </div>
+          <div class="emergency-banner">
+            <span class="icon" data-icon="shield"></span>
+            <div>
+              <p>가장 먼저 보여줄 문장</p>
+              <strong>도와주세요. 저는 한국 봉사자입니다.</strong>
+              <small>Tolong bantu. Saya dari tim relawan Korea.</small>
+            </div>
+          </div>
+          <div class="two-column">
+            <section class="content-band flush">
+              <div class="section-heading compact">
+                <h3>팀 연락망</h3>
+              </div>
+              <div class="contact-list" data-contact-list></div>
+            </section>
+            <section class="content-band flush">
+              <div class="section-heading compact">
+                <h3>긴급 회화</h3>
+              </div>
+              <div class="card-list tight" data-safety-phrases></div>
+            </section>
+          </div>
+        </section>
+
+        <section class="view" data-view="library" aria-labelledby="library-title">
+          <div class="section-heading sticky-heading">
+            <div>
+              <p class="eyebrow">Team upload hub</p>
+              <h2 id="library-title">팀 자료실</h2>
+            </div>
+            <button class="icon-button" type="button" data-open-uploader aria-label="업로드">
+              <span class="icon" data-icon="upload"></span>
+            </button>
+          </div>
+          <section class="upload-zone" data-open-uploader>
+            <span class="icon" data-icon="folder"></span>
+            <strong>팀별 자료를 직접 업로드</strong>
+            <p>JSON 백업, CSV 회화표, TXT 안내문, 이미지, PDF를 기기 안에 저장합니다.</p>
+          </section>
+          <div class="library-actions">
+            <button class="secondary-action" type="button" data-export-kit>
+              <span class="icon" data-icon="download"></span>
+              키트 내보내기
+            </button>
+          </div>
+          <div class="file-list" data-file-list></div>
+        </section>
+      </main>
+
+      <nav class="bottom-nav" aria-label="주요 메뉴">
+        <button class="active" type="button" data-nav="home">
+          <span class="icon" data-icon="home"></span>
+          홈
+        </button>
+        <button type="button" data-nav="phrasebook">
+          <span class="icon" data-icon="message"></span>
+          회화
+        </button>
+        <button type="button" data-nav="lessons">
+          <span class="icon" data-icon="book"></span>
+          수업
+        </button>
+        <button type="button" data-nav="field">
+          <span class="icon" data-icon="helmet"></span>
+          현장
+        </button>
+        <button type="button" data-nav="library">
+          <span class="icon" data-icon="folder"></span>
+          자료
+        </button>
+      </nav>
+    </div>
+
+    <dialog class="modal" data-modal="settings">
+      <form method="dialog" class="modal-card">
+        <div class="modal-heading">
+          <div>
+            <p class="eyebrow">Team setup</p>
+            <h2>팀 환경 설정</h2>
+          </div>
+          <button class="icon-button" value="close" aria-label="닫기">
+            <span class="icon" data-icon="x"></span>
+          </button>
+        </div>
+        <div class="form-grid">
+          <label>팀 이름 <input data-setting="teamName" placeholder="예: Bali Build 20" /></label>
+          <label>봉사 지역 <input data-setting="location" placeholder="예: Yogyakarta, Indonesia" /></label>
+          <label>일정 <input data-setting="dateRange" placeholder="예: 2026.08.03 - 08.12" /></label>
+          <label>봉사 시작일 <input data-setting="startDate" type="date" /></label>
+          <label>숙소 주소 <input data-setting="baseAddress" placeholder="현지 주소" /></label>
+          <label>팀장 연락처 <input data-setting="leaderPhone" placeholder="+62 ..." /></label>
+          <label>테마 색상
+            <select data-setting="theme">
+              <option value="teal">청록 기본</option>
+              <option value="coral">코랄 포인트</option>
+              <option value="indigo">인디고 바탕</option>
+              <option value="lime">라임 라이트</option>
+            </select>
+          </label>
+        </div>
+        <menu>
+          <button class="secondary-action" value="close">취소</button>
+          <button class="primary-action" type="button" data-save-settings>저장</button>
+        </menu>
+      </form>
+    </dialog>
+
+    <dialog class="modal" data-modal="sync">
+      <form method="dialog" class="modal-card sync-modal-card">
+        <div class="modal-heading">
+          <div>
+            <p class="eyebrow">Team cloud</p>
+            <h2>팀 코드로 연결</h2>
+          </div>
+          <button class="icon-button" value="close" aria-label="닫기">
+            <span class="icon" data-icon="x"></span>
+          </button>
+        </div>
+        <section class="sync-editor">
+          <div>
+            <strong>Supabase 팀 공간</strong>
+            <small>팀 코드가 같으면 일정과 준비물 목록을 함께 볼 수 있어요.</small>
+          </div>
+          <label>팀 코드 <input data-sync-code placeholder="INDO2026" /></label>
+          <label>내 이름 <input data-sync-name placeholder="예: 민지" /></label>
+          <div class="sync-hint">
+            <span class="icon" data-icon="wifi"></span>
+            <span data-sync-modal-status>아직 연결되지 않았어요.</span>
+          </div>
+        </section>
+        <menu>
+          <button class="secondary-action" value="close">닫기</button>
+          <button class="primary-action" type="button" data-connect-sync>연결하기</button>
+        </menu>
+      </form>
+    </dialog>
+
+    <dialog class="modal" data-modal="schedule">
+      <form method="dialog" class="modal-card schedule-modal-card">
+        <div class="modal-heading">
+          <div>
+            <p class="eyebrow">Calendar setup</p>
+            <h2>봉사 일정 설정</h2>
+          </div>
+          <button class="icon-button" value="close" aria-label="닫기">
+            <span class="icon" data-icon="x"></span>
+          </button>
+        </div>
+
+        <section class="schedule-date-card">
+          <div>
+            <strong>봉사 기간</strong>
+            <small>DAY 표시와 남은 날짜 계산에 바로 반영됩니다.</small>
+          </div>
+          <div class="schedule-date-grid">
+            <label>시작일 <input data-schedule-start-date type="date" /></label>
+            <label>종료일 <input data-schedule-end-date type="date" /></label>
+          </div>
+          <button class="secondary-action full" type="button" data-save-trip-dates>기간 저장</button>
+        </section>
+
+        <section class="schedule-editor">
+          <div class="schedule-editor-head">
+            <div>
+              <strong>오늘 일정 추가</strong>
+              <small>팀원이 직접 시간, 장소, 내용을 넣고 지울 수 있어요.</small>
+            </div>
+          </div>
+          <div class="schedule-form-grid">
+            <label>시작 <input data-schedule-time-start type="time" /></label>
+            <label>종료 <input data-schedule-time-end type="time" /></label>
+            <label class="span-2">일정 내용 <input data-schedule-title placeholder="예: 건축 현장 안전 브리핑" /></label>
+            <label>장소 <input data-schedule-place placeholder="Village center" /></label>
+            <label>분류 <input data-schedule-type placeholder="건축, 수업, 팀" /></label>
+          </div>
+          <button class="primary-action full" type="button" data-add-schedule>
+            <span class="icon" data-icon="plus"></span>
+            일정 추가
+          </button>
+        </section>
+
+        <section class="schedule-list-card">
+          <div class="schedule-editor-head">
+            <div>
+              <strong>등록된 일정</strong>
+              <small>시간순으로 홈 화면에 표시됩니다.</small>
+            </div>
+          </div>
+          <div class="schedule-list" data-schedule-list></div>
+        </section>
+      </form>
+    </dialog>
+
+    <dialog class="modal" data-modal="prep">
+      <form method="dialog" class="modal-card prep-modal-card">
+        <div class="modal-heading">
+          <div>
+            <p class="eyebrow">Before going out</p>
+            <h2>준비물 체크 수정</h2>
+          </div>
+          <button class="icon-button" value="close" aria-label="닫기">
+            <span class="icon" data-icon="x"></span>
+          </button>
+        </div>
+        <section class="prep-editor">
+          <div>
+            <strong>내일 나가기 전 볼 목록</strong>
+            <small>팀 상황에 맞게 준비물을 추가하거나 지울 수 있어요.</small>
+          </div>
+          <div class="prep-edit-list" data-prep-edit-list></div>
+          <div class="prep-add-row">
+            <input data-prep-new-label placeholder="예: 우비, 수업 프린트, 모기약" />
+            <button class="secondary-action" type="button" data-add-prep-item>
+              <span class="icon" data-icon="plus"></span>
+              추가
+            </button>
+          </div>
+        </section>
+        <menu>
+          <button class="secondary-action" value="close">닫기</button>
+          <button class="primary-action" type="button" data-save-prep-items>저장</button>
+        </menu>
+      </form>
+    </dialog>
+
+    <dialog class="modal" data-modal="item">
+      <form method="dialog" class="modal-card" data-item-form>
+        <div class="modal-heading">
+          <div>
+            <p class="eyebrow" data-item-eyebrow>New item</p>
+            <h2 data-item-title>추가하기</h2>
+          </div>
+          <button class="icon-button" value="close" aria-label="닫기">
+            <span class="icon" data-icon="x"></span>
+          </button>
+        </div>
+        <div class="dynamic-fields" data-dynamic-fields></div>
+        <menu>
+          <button class="secondary-action" value="close">취소</button>
+          <button class="primary-action" type="submit">저장</button>
+        </menu>
+      </form>
+    </dialog>
+
+    <dialog class="modal" data-modal="uploader">
+      <form method="dialog" class="modal-card uploader-card">
+        <div class="modal-heading">
+          <div>
+            <p class="eyebrow">Import & files</p>
+            <h2>자료 가져오기</h2>
+          </div>
+          <button class="icon-button" value="close" aria-label="닫기">
+            <span class="icon" data-icon="x"></span>
+          </button>
+        </div>
+        <label class="drop-target" data-drop-target>
+          <span class="icon" data-icon="upload"></span>
+          <strong>파일 선택 또는 드래그</strong>
+          <small>JSON, CSV, TXT, PDF, 이미지 파일을 지원합니다.</small>
+          <input data-file-input type="file" multiple accept=".json,.csv,.txt,.pdf,image/*" />
+        </label>
+        <div class="import-hint">
+          <strong>팀 공유 방식</strong>
+          <p>팀장이 자료를 넣고 키트 내보내기로 JSON을 만든 뒤 공유하면, 다른 팀원은 여기서 가져오기만 하면 됩니다.</p>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="modal" data-modal="install">
+      <form method="dialog" class="modal-card">
+        <div class="modal-heading">
+          <div>
+            <p class="eyebrow">Install guide</p>
+            <h2>홈 화면에 추가</h2>
+          </div>
+          <button class="icon-button" value="close" aria-label="닫기">
+            <span class="icon" data-icon="x"></span>
+          </button>
+        </div>
+        <div class="install-card">
+          <div class="qr-preview" data-qr-preview aria-label="배포 링크 QR 미리보기"></div>
+          <div>
+            <h3>출국 전에 한 번만 설치하세요</h3>
+            <p>Android Chrome은 설치 버튼을, iPhone Safari는 공유 메뉴의 홈 화면에 추가를 사용합니다.</p>
+            <div class="share-row">
+              <button class="primary-action" type="button" data-install-app>설치하기</button>
+              <button class="secondary-action" type="button" data-copy-link>링크 복사</button>
+            </div>
+          </div>
+        </div>
+      </form>
+    </dialog>
+
+    <div class="toast" data-toast role="status" aria-live="polite"></div>
+    <script src="config.js"></script>
+    <script src="app.js?v=tabs1" defer></script>
+  </body>
+</html>

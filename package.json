@@ -1,0 +1,10 @@
+{
+  "name": "sahabat-kit",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node server.mjs 4173",
+    "build": "node scripts/build-config.mjs && node --check app.js && node --check server.mjs"
+  }
+}

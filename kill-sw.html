@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Reset Volunteer Kit Cache</title>
+    <style>
+      body {
+        display: grid;
+        min-height: 100vh;
+        margin: 0;
+        place-items: center;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      main {
+        width: min(360px, calc(100vw - 32px));
+        padding: 20px;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>캐시를 정리하고 있어요</h1>
+      <p>잠시 후 Volunteer Kit으로 돌아갑니다.</p>
+    </main>
+    <script>
+      async function reset() {
+        if ("serviceWorker" in navigator) {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(registrations.map((registration) => registration.unregister()));
+        }
+        if ("caches" in window) {
+          const keys = await caches.keys();
+          await Promise.all(keys.map((key) => caches.delete(key)));
+        }
+        location.replace("/?v=supa8&reset=" + Date.now());
+      }
+      reset();
+    </script>
+  </body>
+</html>

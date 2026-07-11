@@ -466,52 +466,32 @@ function renderLocation() {
 
 function initGoogleMap() {
   const canvas = $("[data-google-map]");
-  if (!canvas || !GOOGLE_MAPS_API_KEY) return;
   const status = $("[data-map-status]");
+  if (!canvas) return;
+  renderEmbedMap();
+  if (!GOOGLE_MAPS_API_KEY) return;
   loadGoogleMaps()
     .then(() => {
-      const center = currentPosition
-        ? { lat: currentPosition.latitude, lng: currentPosition.longitude }
-        : DEFAULT_MAP_CENTER;
-      googleMap = new google.maps.Map(canvas, {
-        center,
-        zoom: currentPosition ? 15 : 11,
-        disableDefaultUI: true,
-        clickableIcons: false,
-        gestureHandling: "greedy",
-        styles: [
-          { featureType: "poi", stylers: [{ visibility: "off" }] },
-          { featureType: "transit", stylers: [{ visibility: "off" }] },
-          { featureType: "road", elementType: "geometry", stylers: [{ color: "#ffffff" }] },
-          { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#667085" }] },
-          { featureType: "water", stylers: [{ color: "#bfe4f6" }] },
-          { featureType: "landscape", stylers: [{ color: "#eaf5ee" }] }
-        ]
-      });
-      googleMapMarker = new google.maps.Marker({
-        position: center,
-        map: googleMap,
-        title: state.settings.location || "Volunteer base"
-      });
-      const failTimer = window.setTimeout(() => {
-        if (!canvas.classList.contains("google-map-ready")) setGoogleMapFailed(canvas, status);
-      }, 6000);
-      google.maps.event.addListenerOnce(googleMap, "tilesloaded", () => {
-        window.setTimeout(() => {
-          window.clearTimeout(failTimer);
-          if (hasGoogleMapError(canvas)) {
-            setGoogleMapFailed(canvas, status);
-            return;
-          }
-          canvas.classList.add("google-map-ready");
-          canvas.classList.remove("google-map-failed");
-          if (status) status.textContent = "";
-        }, 400);
-      });
+      if (status) status.textContent = "";
     })
     .catch(() => {
-      setGoogleMapFailed(canvas, status);
+      if (status) status.textContent = "";
     });
+}
+
+function renderEmbedMap() {
+  const canvas = $("[data-google-map]");
+  if (!canvas) return;
+  const lat = currentPosition?.latitude ?? DEFAULT_MAP_CENTER.lat;
+  const lng = currentPosition?.longitude ?? DEFAULT_MAP_CENTER.lng;
+  const delta = currentPosition ? 0.018 : 0.09;
+  const bbox = [lng - delta, lat - delta, lng + delta, lat + delta].join(",");
+  const src = `https://www.openstreetmap.org/export/embed.html?bbox=${encodeURIComponent(
+    bbox
+  )}&layer=mapnik&marker=${encodeURIComponent(`${lat},${lng}`)}`;
+  canvas.classList.add("google-map-ready");
+  canvas.classList.remove("google-map-failed");
+  canvas.innerHTML = `<iframe class="embed-map-frame" title="현재 위치 지도" src="${src}" loading="lazy"></iframe>`;
 }
 
 function loadGoogleMaps() {
@@ -549,11 +529,7 @@ function setGoogleMapFailed(canvas, status) {
 }
 
 function updateGoogleMapPosition() {
-  if (!googleMap || !currentPosition) return;
-  const center = { lat: currentPosition.latitude, lng: currentPosition.longitude };
-  googleMap.setCenter(center);
-  googleMap.setZoom(15);
-  if (googleMapMarker) googleMapMarker.setPosition(center);
+  renderEmbedMap();
 }
 
 function updateCurrentPlaceName() {

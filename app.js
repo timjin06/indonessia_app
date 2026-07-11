@@ -49,9 +49,9 @@ const sampleState = {
   settings: {
     teamName: "Today Volunteer",
     location: "Yogyakarta, Indonesia",
-    dateRange: "2026.07.06 - 07.15",
-    startDate: "2026-07-06",
-    endDate: "2026-07-15",
+    dateRange: "2026.07.12 - 07.20",
+    startDate: "2026-07-12",
+    endDate: "2026-07-20",
     baseAddress: "",
     leaderPhone: "",
     theme: "teal"
@@ -111,15 +111,13 @@ const sampleState = {
     { id: crypto.randomUUID(), name: "숙소", role: "베이스캠프", phone: "", note: "팀 설정에서 주소를 입력하세요." }
   ],
   prepItems: [
-    { id: "water", label: "개인 물통" },
-    { id: "lesson", label: "수업 자료" },
-    { id: "safety", label: "장갑·모자" },
-    { id: "phone", label: "보조배터리" }
+    { id: "visa", label: "비자" },
+    { id: "passport", label: "여권" },
+    { id: "goods", label: "해피무브 굿즈" },
+    { id: "earphones", label: "이어폰" }
   ],
   schedules: [
-    { id: crypto.randomUUID(), time: "09:00", endTime: "10:00", title: "건축 현장 안전 브리핑", place: "Village center", type: "건축" },
-    { id: crypto.randomUUID(), time: "13:30", endTime: "15:00", title: "아이들 영어·미술 수업", place: "Community classroom", type: "수업" },
-    { id: crypto.randomUUID(), time: "17:40", endTime: "18:20", title: "팀 회고와 내일 준비", place: "Base camp", type: "팀" }
+    { id: crypto.randomUUID(), time: "19:00", endTime: "22:00", title: "호텔 체크인", place: "호텔", type: "팀" }
   ]
 };
 

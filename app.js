@@ -1137,11 +1137,11 @@ async function addPrepItemFromForm() {
     return;
   }
   const item = { id: crypto.randomUUID(), label };
+  await insertRemotePrepItem(item, state.prepItems.length + 1);
   state.prepItems.push(item);
   if (input) input.value = "";
   saveState();
   renderPrepEditor();
-  await insertRemotePrepItem(item, state.prepItems.length);
   toast("준비물이 추가됐어요.");
 }
 
@@ -1163,30 +1163,30 @@ async function savePrepItemsFromForm() {
   const nextIds = new Set(nextItems.map((item) => item.id));
   const deletedIds = [...previousIds].filter((id) => !nextIds.has(id));
 
-  state.prepItems = nextItems;
   const prepState = loadPrepChecks();
   const validIds = new Set(nextItems.map((item) => item.id));
   Object.keys(prepState).forEach((id) => {
     if (!validIds.has(id)) delete prepState[id];
   });
+  await syncRemotePrepItems(nextItems, deletedIds);
+  state.prepItems = nextItems;
   localStorage.setItem(PREP_KEY, JSON.stringify(prepState));
   const newInput = $("[data-prep-new-label]");
   if (newInput) newInput.value = "";
   saveState();
   renderPrepEditor();
-  await syncRemotePrepItems(nextItems, deletedIds);
   closeModal("prep");
   toast("준비물 목록을 저장했어요.");
 }
 
 async function deletePrepItem(id) {
+  await deleteRemotePrepItem(id);
   state.prepItems = state.prepItems.filter((item) => item.id !== id);
   const prepState = loadPrepChecks();
   delete prepState[id];
   localStorage.setItem(PREP_KEY, JSON.stringify(prepState));
   saveState();
   renderPrepEditor();
-  await deleteRemotePrepItem(id);
 }
 
 async function connectSupabaseTeam(options = {}) {
@@ -1273,6 +1273,7 @@ async function refreshRemoteData(options = {}) {
   try {
     await loadRemoteTeamData();
     saveState();
+    render();
     if (!options.silent) toast("팀 데이터를 새로 불러왔어요.");
   } catch {
     syncSession.connected = false;
@@ -1435,12 +1436,6 @@ async function insertRemotePrepItem(item, sortOrder) {
 async function syncRemotePrepItems(items, deletedIds = []) {
   if (!isRemoteReady()) return;
   await withRemoteWrite(async () => {
-    const teamId = encodeURIComponent(syncSession.teamId);
-    const keepIds = items.map((item) => item.id).filter(Boolean);
-    const deletePath = keepIds.length
-      ? `/rest/v1/prep_items?team_id=eq.${teamId}&id=not.in.(${keepIds.join(",")})`
-      : `/rest/v1/prep_items?team_id=eq.${teamId}`;
-    await supabaseRequest(deletePath, { method: "DELETE" });
     if (deletedIds.length) {
       await Promise.all(deletedIds.map((id) => deleteRemotePrepItemDirect(id)));
     }
@@ -1471,12 +1466,13 @@ async function deleteRemotePrepItem(id) {
 }
 
 async function deleteRemotePrepItemDirect(id) {
-  await supabaseRequest(`/rest/v1/prep_items?id=eq.${encodeURIComponent(id)}`, {
+  await supabaseRequest(`/rest/v1/prep_items?id=eq.${encodeURIComponent(id)}&team_id=eq.${encodeURIComponent(syncSession.teamId)}`, {
     method: "DELETE"
   });
 }
 
 async function withRemoteWrite(action, failureMessage) {
+  if (!isRemoteReady()) return;
   try {
     remoteWriteInProgress = true;
     await action();
@@ -1486,6 +1482,7 @@ async function withRemoteWrite(action, failureMessage) {
     renderSyncStatus();
   } catch (error) {
     toast(`${failureMessage} ${error.message}`);
+    throw error;
   } finally {
     remoteWriteInProgress = false;
   }
@@ -1551,11 +1548,11 @@ async function addScheduleFromForm() {
     place,
     type
   };
+  await insertRemoteSchedule(schedule);
   state.schedules.push(schedule);
   state.schedules.sort((a, b) => (timeToMinutes(a.time) ?? 9999) - (timeToMinutes(b.time) ?? 9999));
   clearScheduleForm();
   saveState();
-  await insertRemoteSchedule(schedule);
   renderScheduleList();
   toast("일정이 추가됐어요.");
 }
@@ -1571,9 +1568,9 @@ async function deleteSchedule(id) {
   const item = state.schedules.find((schedule) => schedule.id === id);
   if (!item) return;
   if (!window.confirm(`"${item.title}" 일정을 삭제할까요?`)) return;
+  await deleteRemoteSchedule(id);
   state.schedules = state.schedules.filter((schedule) => schedule.id !== id);
   saveState();
-  await deleteRemoteSchedule(id);
   renderScheduleList();
   toast("일정이 삭제됐어요.");
 }

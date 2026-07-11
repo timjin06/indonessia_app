@@ -1,0 +1,11 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": ".",
+  "cleanUrls": true,
+  "rewrites": [
+    {
+      "source": "/((?!api|assets|config\\.js|app\\.js|styles\\.css|sw\\.js|manifest\\.webmanifest|kill-sw\\.html).*)",
+      "destination": "/index.html"
+    }
+  ]
+}

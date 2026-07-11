@@ -442,10 +442,16 @@ select:focus-visible {
   gap: 8px;
 }
 
+.home-title-row > div:first-child {
+  flex: 1 1 auto;
+  min-width: 145px;
+}
+
 .home-title-row h2 {
   margin: 0;
-  font-size: 2rem;
+  font-size: 1.72rem;
   line-height: 1.05;
+  white-space: nowrap;
 }
 
 .home-actions {
@@ -454,15 +460,15 @@ select:focus-visible {
 }
 
 .title-mascot {
-  width: 48px;
-  height: 82px;
+  width: 42px;
+  height: 72px;
   margin: -12px 0 -10px auto;
-  transform: translateX(-4px);
+  transform: translateX(-2px);
 }
 
 .round-action {
-  width: 48px;
-  height: 48px;
+  width: 44px;
+  height: 44px;
 }
 
 .mission-stats {

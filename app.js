@@ -57,67 +57,67 @@ const sampleState = {
   phrases: [
     {
       id: crypto.randomUUID(),
-      category: "Greeting",
-      ko: "Hello. We are volunteers from Korea.",
+      category: "인사",
+      ko: "안녕하세요. 우리는 한국 봉사팀입니다.",
       idn: "Halo. Kami tim relawan dari Korea.",
       pron: "Halo. Kami tim relawan dari Korea.",
-      note: "Use when meeting local partners.",
-      tags: ["basic", "intro"],
+      note: "현지 파트너를 처음 만날 때 사용해요.",
+      tags: ["기초", "소개"],
       favorite: true
     },
     {
       id: crypto.randomUUID(),
-      category: "Class",
-      ko: "Good job. Do you want to try again?",
+      category: "수업",
+      ko: "잘했어요. 한 번 더 해볼까요?",
       idn: "Bagus. Mau coba sekali lagi?",
       pron: "Bagus. Mau coba sekali lagi?",
-      note: "Encouragement for children.",
-      tags: ["class", "kids"],
+      note: "아이들을 격려할 때 사용해요.",
+      tags: ["수업", "아이들"],
       favorite: true
     },
     {
       id: crypto.randomUUID(),
-      category: "Safety",
-      ko: "Be careful. This place is dangerous.",
+      category: "건축",
+      ko: "조심하세요. 여기는 위험해요.",
       idn: "Hati-hati. Di sini berbahaya.",
       pron: "Hati-hati. Di sini berbahaya.",
-      note: "Use around construction areas.",
-      tags: ["safety", "field"],
+      note: "건축 현장 주변에서 사용해요.",
+      tags: ["안전", "현장"],
       favorite: true
     }
   ],
   lessons: [
     {
       id: crypto.randomUUID(),
-      title: "Color bingo",
-      subject: "English and art",
-      age: "Elementary",
-      duration: "25 min",
-      materials: "Color cards, stickers",
-      goal: "Children practice color words through a simple game.",
-      steps: ["Show color cards", "Repeat color words", "Play bingo", "Praise everyone"],
+      title: "색깔 빙고",
+      subject: "영어와 미술",
+      age: "초등",
+      duration: "25분",
+      materials: "색깔 카드, 스티커",
+      goal: "아이들이 간단한 게임으로 색깔 단어를 익혀요.",
+      steps: ["색깔 카드 보여주기", "색깔 단어 따라 말하기", "빙고 놀이하기", "모두 칭찬하기"],
       phrases: ["Bagus!", "Warna apa ini?", "Ayo coba lagi."]
     }
   ],
   checklist: [
-    { id: crypto.randomUUID(), text: "Wear helmet, gloves, and safety shoes", category: "Safety" },
-    { id: crypto.randomUUID(), text: "Check water, shade, and rest area", category: "Health" },
-    { id: crypto.randomUUID(), text: "Share today's work zone and danger points", category: "Field" }
+    { id: crypto.randomUUID(), text: "장갑, 안전화, 모자 착용 확인", category: "안전" },
+    { id: crypto.randomUUID(), text: "물, 그늘, 휴식 위치 확인", category: "건강" },
+    { id: crypto.randomUUID(), text: "오늘 작업 구역과 위험 지점 공유", category: "현장" }
   ],
   contacts: [
-    { id: crypto.randomUUID(), name: "Team leader", role: "Korea team leader", phone: "", note: "Set phone number in team settings." },
-    { id: crypto.randomUUID(), name: "Base camp", role: "Base camp", phone: "", note: "Set address in team settings." }
+    { id: crypto.randomUUID(), name: "팀장", role: "한국 팀장", phone: "", note: "팀 설정에서 연락처를 입력하세요." },
+    { id: crypto.randomUUID(), name: "숙소", role: "베이스캠프", phone: "", note: "팀 설정에서 주소를 입력하세요." }
   ],
   prepItems: [
-    { id: "water", label: "Personal water bottle" },
-    { id: "lesson", label: "Class materials" },
-    { id: "safety", label: "Gloves and hat" },
-    { id: "phone", label: "Power bank" }
+    { id: "water", label: "개인 물통" },
+    { id: "lesson", label: "수업 자료" },
+    { id: "safety", label: "장갑·모자" },
+    { id: "phone", label: "보조배터리" }
   ],
   schedules: [
-    { id: crypto.randomUUID(), time: "09:00", endTime: "10:00", title: "Construction safety briefing", place: "Village center", type: "Build" },
-    { id: crypto.randomUUID(), time: "13:30", endTime: "15:00", title: "Kids English and art class", place: "Community classroom", type: "Class" },
-    { id: crypto.randomUUID(), time: "17:40", endTime: "18:20", title: "Team debrief and tomorrow prep", place: "Base camp", type: "Team" }
+    { id: crypto.randomUUID(), time: "09:00", endTime: "10:00", title: "건축 현장 안전 브리핑", place: "Village center", type: "건축" },
+    { id: crypto.randomUUID(), time: "13:30", endTime: "15:00", title: "아이들 영어·미술 수업", place: "Community classroom", type: "수업" },
+    { id: crypto.randomUUID(), time: "17:40", endTime: "18:20", title: "팀 회고와 내일 준비", place: "Base camp", type: "팀" }
   ]
 };
 
@@ -180,6 +180,7 @@ let timerSeconds = 300;
 let timerRemaining = 300;
 let timerId = null;
 let currentPosition = null;
+let currentPlaceLabel = "";
 let syncSession = loadSyncSession();
 let syncTimerId = null;
 let remoteWriteInProgress = false;
@@ -240,11 +241,14 @@ function loadState() {
       schedules: savedList("schedules")
     };
     if (loaded.settings.teamName === "Sahabat Kit") loaded.settings.teamName = "Volunteer Kit";
+    const normalizedLegacyText = normalizeLegacyKoreanText(loaded);
     loaded.settings.startDate = formatDateInput(parseStartDate(loaded.settings.dateRange)) || loaded.settings.startDate || "";
     loaded.settings.endDate = formatDateInput(parseEndDate(loaded.settings.dateRange)) || loaded.settings.endDate || "";
     if ((loaded.basicPhrasePackVersion || 0) < BASIC_PHRASE_PACK_VERSION) {
       loaded.phrases = appendMissingPhrases(loaded.phrases, basicPhrasePack);
       loaded.basicPhrasePackVersion = BASIC_PHRASE_PACK_VERSION;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(loaded));
+    } else if (normalizedLegacyText) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(loaded));
     }
     return loaded;
@@ -254,6 +258,68 @@ function loadState() {
     fallback.basicPhrasePackVersion = BASIC_PHRASE_PACK_VERSION;
     return fallback;
   }
+}
+
+function normalizeLegacyKoreanText(loaded) {
+  let changed = false;
+  const textMap = {
+    "Greeting": "인사",
+    "Class": "수업",
+    "Safety": "건축",
+    "Health": "건강",
+    "Field": "현장",
+    "Build": "건축",
+    "Team": "팀",
+    "Hello. We are volunteers from Korea.": "안녕하세요. 우리는 한국 봉사팀입니다.",
+    "Use when meeting local partners.": "현지 파트너를 처음 만날 때 사용해요.",
+    "Good job. Do you want to try again?": "잘했어요. 한 번 더 해볼까요?",
+    "Encouragement for children.": "아이들을 격려할 때 사용해요.",
+    "Be careful. This place is dangerous.": "조심하세요. 여기는 위험해요.",
+    "Use around construction areas.": "건축 현장 주변에서 사용해요.",
+    "Color bingo": "색깔 빙고",
+    "English and art": "영어와 미술",
+    "Elementary": "초등",
+    "25 min": "25분",
+    "Color cards, stickers": "색깔 카드, 스티커",
+    "Children practice color words through a simple game.": "아이들이 간단한 게임으로 색깔 단어를 익혀요.",
+    "Show color cards": "색깔 카드 보여주기",
+    "Repeat color words": "색깔 단어 따라 말하기",
+    "Play bingo": "빙고 놀이하기",
+    "Praise everyone": "모두 칭찬하기",
+    "Wear helmet, gloves, and safety shoes": "장갑, 안전화, 모자 착용 확인",
+    "Check water, shade, and rest area": "물, 그늘, 휴식 위치 확인",
+    "Share today's work zone and danger points": "오늘 작업 구역과 위험 지점 공유",
+    "Team leader": "팀장",
+    "Korea team leader": "한국 팀장",
+    "Set phone number in team settings.": "팀 설정에서 연락처를 입력하세요.",
+    "Base camp": "숙소",
+    "Set address in team settings.": "팀 설정에서 주소를 입력하세요.",
+    "Personal water bottle": "개인 물통",
+    "Class materials": "수업 자료",
+    "Gloves and hat": "장갑·모자",
+    "Power bank": "보조배터리",
+    "Construction safety briefing": "건축 현장 안전 브리핑",
+    "Kids English and art class": "아이들 영어·미술 수업",
+    "Team debrief and tomorrow prep": "팀 회고와 내일 준비"
+  };
+  const normalizeValue = (value) => {
+    if (Array.isArray(value)) return value.map(normalizeValue);
+    if (typeof value !== "string") return value;
+    return textMap[value] || value;
+  };
+  ["phrases", "lessons", "checklist", "contacts", "prepItems", "schedules"].forEach((key) => {
+    if (!Array.isArray(loaded[key])) return;
+    loaded[key] = loaded[key].map((item) => {
+      const next = { ...item };
+      Object.keys(next).forEach((field) => {
+        const normalized = normalizeValue(next[field]);
+        if (JSON.stringify(normalized) !== JSON.stringify(next[field])) changed = true;
+        next[field] = normalized;
+      });
+      return next;
+    });
+  });
+  return changed;
 }
 
 function appendMissingPhrases(existing, additions) {
@@ -387,7 +453,8 @@ function renderLocation() {
   const kicker = $("[data-location-kicker]");
   if (!label || !kicker) return;
   if (currentPosition) {
-    label.textContent = `${currentPosition.latitude.toFixed(3)}, ${currentPosition.longitude.toFixed(3)}`;
+    label.textContent =
+      currentPlaceLabel || `${currentPosition.latitude.toFixed(3)}, ${currentPosition.longitude.toFixed(3)}`;
     kicker.textContent = "현재 GPS 위치";
     return;
   }
@@ -424,6 +491,9 @@ function initGoogleMap() {
         map: googleMap,
         title: state.settings.location || "Volunteer base"
       });
+      canvas.classList.add("google-map-ready");
+      canvas.classList.remove("google-map-failed");
+      if (status) status.textContent = "";
       const failTimer = window.setTimeout(() => {
         if (!canvas.classList.contains("google-map-ready")) setGoogleMapFailed(canvas, status);
       }, 6000);
@@ -485,6 +555,48 @@ function updateGoogleMapPosition() {
   googleMap.setCenter(center);
   googleMap.setZoom(15);
   if (googleMapMarker) googleMapMarker.setPosition(center);
+}
+
+function updateCurrentPlaceName() {
+  if (!currentPosition) return;
+  if (!window.google?.maps?.Geocoder) {
+    renderLocation();
+    return;
+  }
+  const geocoder = new google.maps.Geocoder();
+  geocoder.geocode(
+    { location: { lat: currentPosition.latitude, lng: currentPosition.longitude } },
+    (results, status) => {
+      if (status !== "OK" || !results?.length) {
+        currentPlaceLabel = `${currentPosition.latitude.toFixed(3)}, ${currentPosition.longitude.toFixed(3)}`;
+        renderLocation();
+        return;
+      }
+      const preferred =
+        results.find((item) => item.types?.includes("locality")) ||
+        results.find((item) => item.types?.includes("administrative_area_level_2")) ||
+        results.find((item) => item.types?.includes("administrative_area_level_1")) ||
+        results[0];
+      currentPlaceLabel = compactPlaceName(preferred);
+      renderLocation();
+    }
+  );
+}
+
+function compactPlaceName(result) {
+  const parts = result?.address_components || [];
+  const pick = (...types) =>
+    parts.find((part) => types.some((type) => part.types?.includes(type)))?.long_name;
+  const area =
+    pick("sublocality_level_1", "sublocality", "locality") ||
+    pick("administrative_area_level_2") ||
+    pick("administrative_area_level_1");
+  const city =
+    pick("locality") ||
+    pick("administrative_area_level_2") ||
+    pick("administrative_area_level_1");
+  if (area && city && area !== city) return `${city} ${area}`;
+  return area || city || result?.formatted_address || "현재 위치";
 }
 
 function renderPrepList() {
@@ -625,7 +737,7 @@ function timeToMinutes(value) {
 function renderPhrases() {
   renderCategoryFilters();
   const query = ($('[data-search="phrases"]')?.value || "").trim().toLowerCase();
-  const activeCategory = $(".filter-chip.active")?.dataset.filter || "All";
+  const activeCategory = $(".filter-chip.active")?.dataset.filter || "전체";
   const list = $("[data-phrase-list]");
   const filtered = state.phrases.filter((item) => {
     const haystack = [item.category, item.ko, item.idn, item.pron, item.note, ...(item.tags || [])]
@@ -1560,7 +1672,7 @@ function openItemForm(mode, id = null) {
   editingItemId = id;
   const config = itemConfig(mode);
   $("[data-item-eyebrow]").textContent = config.eyebrow;
-  $("[data-item-title]").textContent = `${config.title}${id ? " Edit" : " Add"}`;
+  $("[data-item-title]").textContent = `${config.title} ${id ? "수정" : "추가"}`;
   const item = id ? findItem(mode, id) : {};
   $("[data-dynamic-fields]").innerHTML = config.fields
     .map((field) => fieldTemplate(field, item?.[field.key] ?? field.default ?? ""))
@@ -1571,51 +1683,51 @@ function openItemForm(mode, id = null) {
 function itemConfig(mode) {
   const configs = {
     phrase: {
-      title: "Phrase",
-      eyebrow: "Phrase",
+      title: "회화",
+      eyebrow: "회화 항목",
       collection: "phrases",
       fields: [
-        { key: "category", label: "Category", placeholder: "Class, Build, Emergency, Daily" },
-        { key: "ko", label: "Korean", placeholder: "Phrase to say" },
-        { key: "idn", label: "Indonesian", placeholder: "Bahasa Indonesia" },
-        { key: "pron", label: "Pronunciation", placeholder: "Pronunciation guide", optional: true },
-        { key: "note", label: "Memo", type: "textarea", className: "span-2", optional: true },
-        { key: "tags", label: "Tags", placeholder: "Comma separated", className: "span-2", optional: true }
+        { key: "category", label: "분류", placeholder: "인사, 수업, 건축, 생활" },
+        { key: "ko", label: "한국어", placeholder: "말하고 싶은 문장" },
+        { key: "idn", label: "인도네시아어", placeholder: "Bahasa Indonesia" },
+        { key: "pron", label: "발음", placeholder: "읽는 법", optional: true },
+        { key: "note", label: "메모", type: "textarea", className: "span-2", optional: true },
+        { key: "tags", label: "태그", placeholder: "쉼표로 구분", className: "span-2", optional: true }
       ]
     },
     lesson: {
-      title: "Lesson",
-      eyebrow: "Lesson",
+      title: "수업",
+      eyebrow: "수업 항목",
       collection: "lessons",
       fields: [
-        { key: "title", label: "Lesson title", placeholder: "Color bingo" },
-        { key: "subject", label: "Subject", placeholder: "Art and English" },
-        { key: "age", label: "Age", placeholder: "Elementary" },
-        { key: "duration", label: "Duration", placeholder: "25 min" },
-        { key: "materials", label: "Materials", placeholder: "Color cards, stickers", className: "span-2" },
-        { key: "goal", label: "Goal", type: "textarea", className: "span-2" },
-        { key: "steps", label: "Steps", type: "textarea", placeholder: "One step per line", className: "span-2" },
-        { key: "phrases", label: "Useful phrases", type: "textarea", placeholder: "One phrase per line", className: "span-2" }
+        { key: "title", label: "수업 제목", placeholder: "색깔 빙고" },
+        { key: "subject", label: "과목", placeholder: "미술과 영어" },
+        { key: "age", label: "대상", placeholder: "초등" },
+        { key: "duration", label: "시간", placeholder: "25분" },
+        { key: "materials", label: "준비물", placeholder: "색깔 카드, 스티커", className: "span-2" },
+        { key: "goal", label: "목표", type: "textarea", className: "span-2" },
+        { key: "steps", label: "진행 순서", type: "textarea", placeholder: "한 줄에 하나씩 입력", className: "span-2" },
+        { key: "phrases", label: "사용 표현", type: "textarea", placeholder: "한 줄에 하나씩 입력", className: "span-2" }
       ]
     },
     checklist: {
-      title: "Checklist",
-      eyebrow: "Checklist",
+      title: "체크리스트",
+      eyebrow: "현장 체크",
       collection: "checklist",
       fields: [
-        { key: "category", label: "Category", placeholder: "Safety" },
-        { key: "text", label: "Checklist item", placeholder: "Wear helmet before work", className: "span-2" }
+        { key: "category", label: "분류", placeholder: "안전" },
+        { key: "text", label: "체크 항목", placeholder: "작업 전 장갑 착용 확인", className: "span-2" }
       ]
     },
     contact: {
-      title: "Contact",
-      eyebrow: "Contact",
+      title: "연락처",
+      eyebrow: "연락처",
       collection: "contacts",
       fields: [
-        { key: "name", label: "Name", placeholder: "Local coordinator" },
-        { key: "role", label: "Role", placeholder: "Local coordinator" },
-        { key: "phone", label: "Phone", placeholder: "+62 ..." },
-        { key: "note", label: "Memo", type: "textarea", className: "span-2" }
+        { key: "name", label: "이름", placeholder: "현지 담당자" },
+        { key: "role", label: "역할", placeholder: "현지 코디네이터" },
+        { key: "phone", label: "전화번호", placeholder: "+62 ..." },
+        { key: "note", label: "메모", type: "textarea", className: "span-2" }
       ]
     }
   };
@@ -2199,22 +2311,24 @@ function updateOfflineStatus() {
 
 function requestCurrentLocation() {
   if (!("geolocation" in navigator)) {
-    toast("GPS is not available on this device.");
+    toast("이 기기에서는 GPS를 사용할 수 없어요.");
     return;
   }
-  toast("Checking current location...");
+  toast("현재 위치를 확인하고 있어요...");
   navigator.geolocation.getCurrentPosition(
     (position) => {
       currentPosition = {
         latitude: position.coords.latitude,
         longitude: position.coords.longitude
       };
+      currentPlaceLabel = "";
       renderLocation();
       updateGoogleMapPosition();
-      toast("GPS location applied.");
+      loadGoogleMaps().then(updateCurrentPlaceName).catch(renderLocation);
+      toast("GPS 위치를 적용했어요.");
     },
     () => {
-      toast("Location permission was not allowed.");
+      toast("위치 권한이 허용되지 않았어요.");
     },
     {
       enableHighAccuracy: false,

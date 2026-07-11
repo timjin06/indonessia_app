@@ -1296,6 +1296,7 @@ function setSyncBusy(isBusy) {
 }
 
 async function supabaseRequest(path, options = {}) {
+  assertSupabaseConfig();
   const response = await fetch(`${SUPABASE_URL}${path}`, {
     ...options,
     headers: {
@@ -1307,7 +1308,7 @@ async function supabaseRequest(path, options = {}) {
     }
   });
   const text = await response.text();
-  const data = text ? JSON.parse(text) : null;
+  const data = parseSupabaseResponse(text, response);
   if (!response.ok) {
     throw new Error(data?.message || data?.hint || response.statusText || "요청 실패");
   }
@@ -1315,6 +1316,7 @@ async function supabaseRequest(path, options = {}) {
 }
 
 async function supabaseStorageRequest(path, options = {}) {
+  assertSupabaseConfig();
   const response = await fetch(`${SUPABASE_URL}${path}`, {
     ...options,
     headers: {
@@ -1329,6 +1331,28 @@ async function supabaseStorageRequest(path, options = {}) {
     throw new Error(data?.message || data?.error || response.statusText || "Storage 요청 실패");
   }
   return data;
+}
+
+function assertSupabaseConfig() {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    throw new Error("Supabase URL 또는 API 키가 비어 있어요. Vercel 환경변수와 로컬 config.js를 확인해 주세요.");
+  }
+  if (!SUPABASE_URL.startsWith("https://") || !SUPABASE_URL.includes(".supabase.co")) {
+    throw new Error("Supabase URL 형식이 올바르지 않아요. https://프로젝트ID.supabase.co 형태여야 해요.");
+  }
+}
+
+function parseSupabaseResponse(text, response) {
+  if (!text) return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    const contentType = response.headers.get("content-type") || "";
+    if (contentType.includes("text/html") || text.trim().startsWith("<")) {
+      throw new Error("Supabase가 JSON 대신 HTML을 반환했어요. Supabase URL 환경변수가 잘못됐을 가능성이 커요.");
+    }
+    throw new Error("Supabase 응답을 읽지 못했어요.");
+  }
 }
 
 function remoteScheduleToState(item) {

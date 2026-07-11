@@ -1,4 +1,4 @@
-const CACHE_NAME = "sahabat-kit-static-v23";
+const CACHE_NAME = "sahabat-kit-static-v24";
 const STATIC_ASSETS = [
   "./",
   "./index.html",

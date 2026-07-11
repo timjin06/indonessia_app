@@ -12,6 +12,7 @@ const GOOGLE_MAPS_API_KEY = APP_CONFIG.GOOGLE_MAPS_API_KEY || "";
 const DEFAULT_TEAM_CODE = "INDO2026";
 const DEFAULT_MAP_CENTER = { lat: -7.7956, lng: 110.3695 };
 const STORAGE_BUCKET = "volunteer-files";
+const TEAM_STATE_FILE = "team-state.json";
 const BASIC_PHRASE_PACK_VERSION = 2;
 
 const iconPaths = {
@@ -1250,13 +1251,22 @@ async function connectSupabaseTeam(options = {}) {
 async function loadRemoteTeamData() {
   if (!syncSession.teamId) return;
   const teamId = encodeURIComponent(syncSession.teamId);
-  const [schedules, prepItems, remoteFiles] = await Promise.all([
-    supabaseRequest(`/rest/v1/schedules?team_id=eq.${teamId}&select=*&order=start_time.asc`),
-    supabaseRequest(`/rest/v1/prep_items?team_id=eq.${teamId}&select=*&order=sort_order.asc`),
+  const [snapshot, remoteFiles] = await Promise.all([
+    loadRemoteTeamSnapshot(),
     loadRemoteFiles()
   ]);
-  state.schedules = schedules.map(remoteScheduleToState);
-  state.prepItems = prepItems.map(remotePrepItemToState);
+  if (snapshot) {
+    state.schedules = Array.isArray(snapshot.schedules) ? snapshot.schedules : state.schedules;
+    state.prepItems = Array.isArray(snapshot.prepItems) ? snapshot.prepItems : state.prepItems;
+  } else {
+    const [schedules, prepItems] = await Promise.all([
+      supabaseRequest(`/rest/v1/schedules?team_id=eq.${teamId}&select=*&order=start_time.asc`),
+      supabaseRequest(`/rest/v1/prep_items?team_id=eq.${teamId}&select=*&order=sort_order.asc`)
+    ]);
+    state.schedules = schedules.map(remoteScheduleToState);
+    state.prepItems = prepItems.map(remotePrepItemToState);
+    await saveRemoteTeamSnapshot();
+  }
   mergeRemoteFiles(remoteFiles);
   syncSession.lastSyncAt = new Date().toISOString();
   saveSyncSession();
@@ -1402,6 +1412,42 @@ function isRemoteReady() {
   return Boolean(syncSession.connected && syncSession.teamId && navigator.onLine);
 }
 
+function remoteTeamStatePath() {
+  return `${syncSession.teamId}/${TEAM_STATE_FILE}`;
+}
+
+async function loadRemoteTeamSnapshot() {
+  if (!isRemoteReady()) return null;
+  try {
+    const text = await supabaseStorageRequest(
+      `/storage/v1/object/${STORAGE_BUCKET}/${encodeStoragePath(remoteTeamStatePath())}`
+    );
+    const snapshot = typeof text === "string" ? JSON.parse(text) : text;
+    if (!snapshot || typeof snapshot !== "object") return null;
+    return snapshot;
+  } catch {
+    return null;
+  }
+}
+
+async function saveRemoteTeamSnapshot(overrides = {}) {
+  if (!isRemoteReady()) return;
+  const payload = {
+    updatedAt: new Date().toISOString(),
+    prepItems: overrides.prepItems || state.prepItems,
+    schedules: overrides.schedules || state.schedules,
+    ...overrides
+  };
+  await supabaseStorageRequest(`/storage/v1/object/${STORAGE_BUCKET}/${encodeStoragePath(remoteTeamStatePath())}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-upsert": "true"
+    },
+    body: JSON.stringify(payload)
+  });
+}
+
 async function updateRemoteTeamSettings() {
   if (!isRemoteReady()) return;
   await withRemoteWrite(async () => {
@@ -1447,24 +1493,7 @@ async function deleteRemoteSchedule(id) {
 async function syncRemoteSchedules(schedules) {
   if (!isRemoteReady()) return;
   await withRemoteWrite(async () => {
-    const teamId = encodeURIComponent(syncSession.teamId);
-    await supabaseRequest(`/rest/v1/schedules?team_id=eq.${teamId}`, { method: "DELETE" });
-    if (schedules.length) {
-      await supabaseRequest("/rest/v1/schedules", {
-        method: "POST",
-        body: JSON.stringify(
-          schedules.map((schedule) => ({
-            id: schedule.id,
-            team_id: syncSession.teamId,
-            start_time: schedule.time,
-            end_time: schedule.endTime || null,
-            title: schedule.title,
-            place: schedule.place || null,
-            type: schedule.type || null
-          }))
-        )
-      });
-    }
+    await saveRemoteTeamSnapshot({ schedules });
     await assertRemoteSchedulesMatch(schedules);
   }, "일정 목록을 서버에 저장하지 못했어요.");
 }
@@ -1487,34 +1516,20 @@ async function insertRemotePrepItem(item, sortOrder) {
 async function syncRemotePrepItems(items, deletedIds = []) {
   if (!isRemoteReady()) return;
   await withRemoteWrite(async () => {
-    const teamId = encodeURIComponent(syncSession.teamId);
-    await supabaseRequest(`/rest/v1/prep_items?team_id=eq.${teamId}`, { method: "DELETE" });
-    if (items.length) {
-      await supabaseRequest("/rest/v1/prep_items", {
-        method: "POST",
-        body: JSON.stringify(
-          items.map((item, index) => ({
-            id: item.id,
-            team_id: syncSession.teamId,
-            label: item.label,
-            sort_order: index + 1
-          }))
-        )
-      });
-    }
+    await saveRemoteTeamSnapshot({ prepItems: items });
     await assertRemotePrepItemsMatch(items);
   }, "준비물 목록을 서버에 저장하지 못했어요.");
 }
 
 async function assertRemoteSchedulesMatch(expected) {
   if (!isRemoteReady()) return;
-  const teamId = encodeURIComponent(syncSession.teamId);
-  const remote = await supabaseRequest(`/rest/v1/schedules?team_id=eq.${teamId}&select=*&order=start_time.asc`);
+  const snapshot = await loadRemoteTeamSnapshot();
+  const remote = snapshot?.schedules || [];
   const normalize = (items) =>
     items
       .map((item) => ({
-        time: item.time || normalizeRemoteTime(item.start_time),
-        endTime: item.endTime || normalizeRemoteTime(item.end_time),
+        time: item.time || "",
+        endTime: item.endTime || "",
         title: item.title || "",
         place: item.place || "",
         type: item.type || ""
@@ -1527,8 +1542,8 @@ async function assertRemoteSchedulesMatch(expected) {
 
 async function assertRemotePrepItemsMatch(expected) {
   if (!isRemoteReady()) return;
-  const teamId = encodeURIComponent(syncSession.teamId);
-  const remote = await supabaseRequest(`/rest/v1/prep_items?team_id=eq.${teamId}&select=*&order=sort_order.asc`);
+  const snapshot = await loadRemoteTeamSnapshot();
+  const remote = snapshot?.prepItems || [];
   const normalize = (items) => items.map((item) => item.label || "").filter(Boolean);
   if (JSON.stringify(normalize(expected)) !== JSON.stringify(normalize(remote))) {
     throw new Error("서버에 저장된 준비물 목록이 방금 수정한 내용과 달라요.");

@@ -1137,8 +1137,9 @@ async function addPrepItemFromForm() {
     return;
   }
   const item = { id: crypto.randomUUID(), label };
-  await insertRemotePrepItem(item, state.prepItems.length + 1);
-  state.prepItems.push(item);
+  const nextItems = [...state.prepItems, item];
+  await syncRemotePrepItems(nextItems);
+  state.prepItems = nextItems;
   if (input) input.value = "";
   saveState();
   renderPrepEditor();
@@ -1180,8 +1181,9 @@ async function savePrepItemsFromForm() {
 }
 
 async function deletePrepItem(id) {
-  await deleteRemotePrepItem(id);
-  state.prepItems = state.prepItems.filter((item) => item.id !== id);
+  const nextItems = state.prepItems.filter((item) => item.id !== id);
+  await syncRemotePrepItems(nextItems, [id]);
+  state.prepItems = nextItems;
   const prepState = loadPrepChecks();
   delete prepState[id];
   localStorage.setItem(PREP_KEY, JSON.stringify(prepState));
@@ -1442,6 +1444,29 @@ async function deleteRemoteSchedule(id) {
   }, "일정을 서버에서 삭제하지 못했어요.");
 }
 
+async function syncRemoteSchedules(schedules) {
+  if (!isRemoteReady()) return;
+  await withRemoteWrite(async () => {
+    const teamId = encodeURIComponent(syncSession.teamId);
+    await supabaseRequest(`/rest/v1/schedules?team_id=eq.${teamId}`, { method: "DELETE" });
+    if (!schedules.length) return;
+    await supabaseRequest("/rest/v1/schedules", {
+      method: "POST",
+      body: JSON.stringify(
+        schedules.map((schedule) => ({
+          id: schedule.id,
+          team_id: syncSession.teamId,
+          start_time: schedule.time,
+          end_time: schedule.endTime || null,
+          title: schedule.title,
+          place: schedule.place || null,
+          type: schedule.type || null
+        }))
+      )
+    });
+  }, "일정 목록을 서버에 저장하지 못했어요.");
+}
+
 async function insertRemotePrepItem(item, sortOrder) {
   if (!isRemoteReady()) return;
   await withRemoteWrite(async () => {
@@ -1460,25 +1485,20 @@ async function insertRemotePrepItem(item, sortOrder) {
 async function syncRemotePrepItems(items, deletedIds = []) {
   if (!isRemoteReady()) return;
   await withRemoteWrite(async () => {
-    if (deletedIds.length) {
-      await Promise.all(deletedIds.map((id) => deleteRemotePrepItemDirect(id)));
-    }
-    await Promise.all(
-      items.map((item, index) =>
-        supabaseRequest("/rest/v1/prep_items?on_conflict=id", {
-          method: "POST",
-          headers: {
-            Prefer: "resolution=merge-duplicates,return=representation"
-          },
-          body: JSON.stringify({
-            id: item.id,
-            team_id: syncSession.teamId,
-            label: item.label,
-            sort_order: index + 1
-          })
-        })
+    const teamId = encodeURIComponent(syncSession.teamId);
+    await supabaseRequest(`/rest/v1/prep_items?team_id=eq.${teamId}`, { method: "DELETE" });
+    if (!items.length) return;
+    await supabaseRequest("/rest/v1/prep_items", {
+      method: "POST",
+      body: JSON.stringify(
+        items.map((item, index) => ({
+          id: item.id,
+          team_id: syncSession.teamId,
+          label: item.label,
+          sort_order: index + 1
+        }))
       )
-    );
+    });
   }, "준비물 목록을 서버에 저장하지 못했어요.");
 }
 
@@ -1572,9 +1592,11 @@ async function addScheduleFromForm() {
     place,
     type
   };
-  await insertRemoteSchedule(schedule);
-  state.schedules.push(schedule);
-  state.schedules.sort((a, b) => (timeToMinutes(a.time) ?? 9999) - (timeToMinutes(b.time) ?? 9999));
+  const nextSchedules = [...state.schedules, schedule].sort(
+    (a, b) => (timeToMinutes(a.time) ?? 9999) - (timeToMinutes(b.time) ?? 9999)
+  );
+  await syncRemoteSchedules(nextSchedules);
+  state.schedules = nextSchedules;
   clearScheduleForm();
   saveState();
   renderScheduleList();
@@ -1592,8 +1614,9 @@ async function deleteSchedule(id) {
   const item = state.schedules.find((schedule) => schedule.id === id);
   if (!item) return;
   if (!window.confirm(`"${item.title}" 일정을 삭제할까요?`)) return;
-  await deleteRemoteSchedule(id);
-  state.schedules = state.schedules.filter((schedule) => schedule.id !== id);
+  const nextSchedules = state.schedules.filter((schedule) => schedule.id !== id);
+  await syncRemoteSchedules(nextSchedules);
+  state.schedules = nextSchedules;
   saveState();
   renderScheduleList();
   toast("일정이 삭제됐어요.");

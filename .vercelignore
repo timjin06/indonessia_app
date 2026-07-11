@@ -1,0 +1,6 @@
+server.mjs
+start-server-*.cmd
+start-server-*.ps1
+*.before-restore.*
+config.js
+dist

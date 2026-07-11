@@ -45,7 +45,7 @@ const iconPaths = {
 
 const sampleState = {
   settings: {
-    teamName: "Volunteer Kit",
+    teamName: "Today Volunteer",
     location: "Yogyakarta, Indonesia",
     dateRange: "2026.07.06 - 07.15",
     startDate: "2026-07-06",
@@ -240,7 +240,9 @@ function loadState() {
       prepItems: savedList("prepItems"),
       schedules: savedList("schedules")
     };
-    if (loaded.settings.teamName === "Sahabat Kit") loaded.settings.teamName = "Volunteer Kit";
+    if (["Sahabat Kit", "Volunteer Kit", "Indonesia Volunteer Team"].includes(loaded.settings.teamName)) {
+      loaded.settings.teamName = "Today Volunteer";
+    }
     const normalizedLegacyText = normalizeLegacyKoreanText(loaded);
     loaded.settings.startDate = formatDateInput(parseStartDate(loaded.settings.dateRange)) || loaded.settings.startDate || "";
     loaded.settings.endDate = formatDateInput(parseEndDate(loaded.settings.dateRange)) || loaded.settings.endDate || "";
@@ -384,7 +386,7 @@ function render() {
 }
 
 function renderHeader() {
-  $("[data-team-title]").textContent = state.settings.teamName || "Volunteer Kit";
+  $("[data-team-title]").textContent = state.settings.teamName || "Today Volunteer";
   const dateSummary = $("[data-date-summary]");
   if (dateSummary) dateSummary.textContent = state.settings.dateRange || sampleState.settings.dateRange || "Not set";
   const count =
@@ -491,9 +493,6 @@ function initGoogleMap() {
         map: googleMap,
         title: state.settings.location || "Volunteer base"
       });
-      canvas.classList.add("google-map-ready");
-      canvas.classList.remove("google-map-failed");
-      if (status) status.textContent = "";
       const failTimer = window.setTimeout(() => {
         if (!canvas.classList.contains("google-map-ready")) setGoogleMapFailed(canvas, status);
       }, 6000);

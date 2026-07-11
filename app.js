@@ -1,6 +1,7 @@
 ﻿const STORAGE_KEY = "sahabat-kit-state-v1";
 const CHECK_KEY = "sahabat-kit-checks-v1";
 const PREP_KEY = "sahabat-kit-prep-v1";
+const HAS_LOCAL_STATE_AT_BOOT = Boolean(localStorage.getItem(STORAGE_KEY));
 const NAMEBOOK_KEY = "volunteer-kit-namebook-v1";
 const SYNC_KEY = "volunteer-kit-sync-v1";
 const DB_NAME = "sahabat-kit-files";
@@ -1139,10 +1140,10 @@ async function addPrepItemFromForm() {
   }
   const item = { id: crypto.randomUUID(), label };
   const nextItems = [...state.prepItems, item];
-  await syncRemotePrepItems(nextItems);
   state.prepItems = nextItems;
   if (input) input.value = "";
   saveState();
+  queueRemotePrepItemsSync(nextItems);
   renderPrepEditor();
   toast("준비물이 추가됐어요.");
 }
@@ -1170,12 +1171,12 @@ async function savePrepItemsFromForm() {
   Object.keys(prepState).forEach((id) => {
     if (!validIds.has(id)) delete prepState[id];
   });
-  await syncRemotePrepItems(nextItems, deletedIds);
   state.prepItems = nextItems;
   localStorage.setItem(PREP_KEY, JSON.stringify(prepState));
   const newInput = $("[data-prep-new-label]");
   if (newInput) newInput.value = "";
   saveState();
+  queueRemotePrepItemsSync(nextItems, deletedIds);
   renderPrepEditor();
   closeModal("prep");
   toast("준비물 목록을 저장했어요.");
@@ -1183,12 +1184,12 @@ async function savePrepItemsFromForm() {
 
 async function deletePrepItem(id) {
   const nextItems = state.prepItems.filter((item) => item.id !== id);
-  await syncRemotePrepItems(nextItems, [id]);
   state.prepItems = nextItems;
   const prepState = loadPrepChecks();
   delete prepState[id];
   localStorage.setItem(PREP_KEY, JSON.stringify(prepState));
   saveState();
+  queueRemotePrepItemsSync(nextItems, [id]);
   renderPrepEditor();
 }
 
@@ -1256,15 +1257,17 @@ async function loadRemoteTeamData() {
     loadRemoteFiles()
   ]);
   if (snapshot) {
-    state.schedules = Array.isArray(snapshot.schedules) ? snapshot.schedules : state.schedules;
-    state.prepItems = Array.isArray(snapshot.prepItems) ? snapshot.prepItems : state.prepItems;
+    state.schedules = !HAS_LOCAL_STATE_AT_BOOT && Array.isArray(snapshot.schedules) ? snapshot.schedules : state.schedules;
+    state.prepItems = !HAS_LOCAL_STATE_AT_BOOT && Array.isArray(snapshot.prepItems) ? snapshot.prepItems : state.prepItems;
   } else {
     const [schedules, prepItems] = await Promise.all([
       supabaseRequest(`/rest/v1/schedules?team_id=eq.${teamId}&select=*&order=start_time.asc`),
       supabaseRequest(`/rest/v1/prep_items?team_id=eq.${teamId}&select=*&order=sort_order.asc`)
     ]);
-    state.schedules = schedules.map(remoteScheduleToState);
-    state.prepItems = prepItems.map(remotePrepItemToState);
+    if (!HAS_LOCAL_STATE_AT_BOOT) {
+      state.schedules = schedules.map(remoteScheduleToState);
+      state.prepItems = prepItems.map(remotePrepItemToState);
+    }
     bootstrapRemoteTeamSnapshot();
   }
   mergeRemoteFiles(remoteFiles);
@@ -1525,6 +1528,24 @@ async function syncRemotePrepItems(items, deletedIds = []) {
     await saveRemoteTeamSnapshot({ prepItems: items });
     await assertRemotePrepItemsMatch(items);
   }, "준비물 목록을 서버에 저장하지 못했어요.");
+}
+
+function queueRemotePrepItemsSync(items, deletedIds = []) {
+  if (!isRemoteReady()) return;
+  remoteWriteInProgress = true;
+  saveRemoteTeamSnapshot({ prepItems: items })
+    .then(() => {
+      syncSession.lastSyncAt = new Date().toISOString();
+      syncSession.connected = true;
+      saveSyncSession();
+      renderSyncStatus();
+    })
+    .catch((error) => {
+      console.warn("Prep item cloud sync failed.", error, deletedIds);
+    })
+    .finally(() => {
+      remoteWriteInProgress = false;
+    });
 }
 
 async function assertRemoteSchedulesMatch(expected) {

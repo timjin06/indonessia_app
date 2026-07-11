@@ -1449,21 +1449,23 @@ async function syncRemoteSchedules(schedules) {
   await withRemoteWrite(async () => {
     const teamId = encodeURIComponent(syncSession.teamId);
     await supabaseRequest(`/rest/v1/schedules?team_id=eq.${teamId}`, { method: "DELETE" });
-    if (!schedules.length) return;
-    await supabaseRequest("/rest/v1/schedules", {
-      method: "POST",
-      body: JSON.stringify(
-        schedules.map((schedule) => ({
-          id: schedule.id,
-          team_id: syncSession.teamId,
-          start_time: schedule.time,
-          end_time: schedule.endTime || null,
-          title: schedule.title,
-          place: schedule.place || null,
-          type: schedule.type || null
-        }))
-      )
-    });
+    if (schedules.length) {
+      await supabaseRequest("/rest/v1/schedules", {
+        method: "POST",
+        body: JSON.stringify(
+          schedules.map((schedule) => ({
+            id: schedule.id,
+            team_id: syncSession.teamId,
+            start_time: schedule.time,
+            end_time: schedule.endTime || null,
+            title: schedule.title,
+            place: schedule.place || null,
+            type: schedule.type || null
+          }))
+        )
+      });
+    }
+    await assertRemoteSchedulesMatch(schedules);
   }, "일정 목록을 서버에 저장하지 못했어요.");
 }
 
@@ -1487,19 +1489,50 @@ async function syncRemotePrepItems(items, deletedIds = []) {
   await withRemoteWrite(async () => {
     const teamId = encodeURIComponent(syncSession.teamId);
     await supabaseRequest(`/rest/v1/prep_items?team_id=eq.${teamId}`, { method: "DELETE" });
-    if (!items.length) return;
-    await supabaseRequest("/rest/v1/prep_items", {
-      method: "POST",
-      body: JSON.stringify(
-        items.map((item, index) => ({
-          id: item.id,
-          team_id: syncSession.teamId,
-          label: item.label,
-          sort_order: index + 1
-        }))
-      )
-    });
+    if (items.length) {
+      await supabaseRequest("/rest/v1/prep_items", {
+        method: "POST",
+        body: JSON.stringify(
+          items.map((item, index) => ({
+            id: item.id,
+            team_id: syncSession.teamId,
+            label: item.label,
+            sort_order: index + 1
+          }))
+        )
+      });
+    }
+    await assertRemotePrepItemsMatch(items);
   }, "준비물 목록을 서버에 저장하지 못했어요.");
+}
+
+async function assertRemoteSchedulesMatch(expected) {
+  if (!isRemoteReady()) return;
+  const teamId = encodeURIComponent(syncSession.teamId);
+  const remote = await supabaseRequest(`/rest/v1/schedules?team_id=eq.${teamId}&select=*&order=start_time.asc`);
+  const normalize = (items) =>
+    items
+      .map((item) => ({
+        time: item.time || normalizeRemoteTime(item.start_time),
+        endTime: item.endTime || normalizeRemoteTime(item.end_time),
+        title: item.title || "",
+        place: item.place || "",
+        type: item.type || ""
+      }))
+      .sort((a, b) => (timeToMinutes(a.time) ?? 9999) - (timeToMinutes(b.time) ?? 9999));
+  if (JSON.stringify(normalize(expected)) !== JSON.stringify(normalize(remote))) {
+    throw new Error("서버에 저장된 일정 목록이 방금 수정한 내용과 달라요.");
+  }
+}
+
+async function assertRemotePrepItemsMatch(expected) {
+  if (!isRemoteReady()) return;
+  const teamId = encodeURIComponent(syncSession.teamId);
+  const remote = await supabaseRequest(`/rest/v1/prep_items?team_id=eq.${teamId}&select=*&order=sort_order.asc`);
+  const normalize = (items) => items.map((item) => item.label || "").filter(Boolean);
+  if (JSON.stringify(normalize(expected)) !== JSON.stringify(normalize(remote))) {
+    throw new Error("서버에 저장된 준비물 목록이 방금 수정한 내용과 달라요.");
+  }
 }
 
 async function deleteRemotePrepItem(id) {

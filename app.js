@@ -1265,7 +1265,7 @@ async function loadRemoteTeamData() {
     ]);
     state.schedules = schedules.map(remoteScheduleToState);
     state.prepItems = prepItems.map(remotePrepItemToState);
-    await saveRemoteTeamSnapshot();
+    bootstrapRemoteTeamSnapshot();
   }
   mergeRemoteFiles(remoteFiles);
   syncSession.lastSyncAt = new Date().toISOString();
@@ -1441,10 +1441,16 @@ async function saveRemoteTeamSnapshot(overrides = {}) {
   await supabaseStorageRequest(`/storage/v1/object/${STORAGE_BUCKET}/${encodeStoragePath(remoteTeamStatePath())}`, {
     method: "POST",
     headers: {
-      "Content-Type": "application/json",
+      "Content-Type": "text/plain;charset=utf-8",
       "x-upsert": "true"
     },
     body: JSON.stringify(payload)
+  });
+}
+
+function bootstrapRemoteTeamSnapshot() {
+  saveRemoteTeamSnapshot().catch((error) => {
+    console.warn("Initial team snapshot save failed.", error);
   });
 }
 

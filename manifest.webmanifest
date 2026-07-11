@@ -1,17 +1,23 @@
 {
   "name": "Today Volunteer",
-  "short_name": "Today",
+  "short_name": "Today Volunteer",
   "description": "인도네시아 해외봉사팀을 위한 오프라인 봉사 웹앱",
-  "start_url": "./",
-  "scope": "./",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#f6f2e9",
   "theme_color": "#0f766e",
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "assets/app-logo.png",
-      "sizes": "206x205",
+      "src": "assets/app-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/app-icon-512.png",
+      "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
     }

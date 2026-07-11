@@ -1,4 +1,4 @@
-const CACHE_NAME = "sahabat-kit-static-v22";
+const CACHE_NAME = "sahabat-kit-static-v23";
 const STATIC_ASSETS = [
   "./",
   "./index.html",
@@ -6,6 +6,8 @@ const STATIC_ASSETS = [
   "./app.js",
   "./manifest.webmanifest",
   "./assets/app-logo.png",
+  "./assets/app-icon-192.png",
+  "./assets/app-icon-512.png",
   "./assets/mascot-cutout.png"
 ];
 
